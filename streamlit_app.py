@@ -4,6 +4,7 @@ from streamlit_extras.metric_cards import *
 from groq import Groq
 from pyresparser import ResumeParser
 import nltk
+import os
 
 session_options = ['college_name', 'company_names', 'degree', 'designation', 'email','mobile_number','name','no_of_pages','skills','total_experience','count']
 for i in session_options:
@@ -13,6 +14,16 @@ for i in session_options:
 if "session_dict" not in st.session_state:
     st.session_state["session_dict"] = {}
 
+# Ensure stopwords are downloaded at runtime
+nltk_data_path = os.path.join(os.getcwd(), "nltk_data")
+nltk.data.path.append(nltk_data_path)
+
+@st.cache_resource
+def download_nltk_corpora():
+    nltk.download('stopwords', download_dir=nltk_data_path)
+    nltk.download('punkt', download_dir=nltk_data_path)  # Punkt tokenizer is also required
+
+download_nltk_corpora()
 def primary_info(file):
     try:
         if not check_status() and file is not None:

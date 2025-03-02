@@ -52,9 +52,8 @@ def store_and_retrieve_info(documents, groq_api_key):
     
     return extracted_data
 
-# Main App Layout
-with st.sidebar:
-    options = st.pills("Choose Stage", ["About The App", "Resume Parser"], menu_icon="gear", icons=['sun', 'moon'])
+
+options = st.pills("Choose Stage", ["About The App", "Resume Parser"])
 
 if options == "About The App":
     st.title("About The App")

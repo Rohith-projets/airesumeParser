@@ -1,10 +1,10 @@
 streamlit
 streamlit-option-menu
-langchain
-faiss-cpu
-unstructured
+streamlit-extras
+python-docx
+docx
+pyresparser
+nltk
+spacy
 groq
-langchain-community
-sentence-transformers
-huggingface-hub
 pdfminer.six

@@ -1,10 +1,11 @@
+# Frontend Tools - Backend Tools
 streamlit
+streamlit-option-menu
+streamlit-extras
+streamlit-tags
 pandas
-pyresparser
-nltk
-spacy
-pdfminer.six
-docx2txt
-python-magic
-pyyaml
 numpy
+matplolib
+seaborn
+resume-parser
+groq

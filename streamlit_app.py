@@ -13,20 +13,13 @@ for i in session_options:
 if "session_dict" not in st.session_state:
     st.session_state["session_dict"] = {}
 
-
-
-# Ensure necessary corpora are downloaded
-@st.cache_resource
-def download_textblob_corpora():
-    download_all()
-download_textblob_corpora()
-def check_status():
-    return st.session_state.get('count', 0) == 1
-
 def primary_info(file):
     try:
         if not check_status() and file is not None:
-            nltk.download('stopwords')
+            nltk.download('stopwords')  # Ensure stopwords are available
+            nltk.download('punkt')  # Some parsers require this too
+            from nltk.corpus import stopwords  # Import after downloading
+
             parsed_document = ResumeParser(file)
             result_dict = parsed_document.get_extracted_data()
             if result_dict:
@@ -43,6 +36,7 @@ def primary_info(file):
                 st.session_state['count'] = 1
     except Exception as e:
         st.error(f"You got the following error: {e}")
+
 
 def insights():
     pass

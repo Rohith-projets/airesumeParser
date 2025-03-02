@@ -1,94 +1,62 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
-from langchain_community.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain.chains import RetrievalQA
-from langchain.chat_models import ChatGroq
-import tempfile
+from streamlit_extras.metric_cards import *
+from groq import Groq
+from pyresparser import ResumeParser
+import nltk
 
-# Initialize session variables
-session_variables = ['name', 'college', 'place', 'email', 'phone', 'working company', 'years of experience']
-for i in session_variables:
+session_options = ['college_name', 'company_names', 'degree', 'designation', 'email','mobile_number','name','no_of_pages','skills','total_experience','count']
+for i in session_options:
     if i not in st.session_state:
         st.session_state[i] = None
 
-# Function to load and process resume
-def process_resume(uploaded_file):
-    if uploaded_file is not None:
-        file_type = uploaded_file.name.split(".")[-1]
-        
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_type}") as temp_file:
-            temp_file.write(uploaded_file.getvalue())
-            temp_file_path = temp_file.name  # Store the temporary file path
+if "session_dict" not in st.session_state:
+    st.session_state["session_dict"] = {}
 
-        if file_type == "pdf":
-            loader = PyPDFLoader(temp_file_path)
-        elif file_type in ["doc", "docx"]:
-            loader = UnstructuredWordDocumentLoader(temp_file_path)
-        else:
-            st.error("Unsupported file format")
-            return None
-        
-        documents = loader.load()
-        return documents
-    return None
+def check_status():
+    return st.session_state.get('count', 0) == 1
 
-# Function to store in vectorDB and retrieve information
-def store_and_retrieve_info(documents, groq_api_key):
-    embeddings = HuggingFaceEmbeddings()  # Use free embeddings
-    vectordb = FAISS.from_documents(documents, embeddings)
-    retriever = vectordb.as_retriever()
-    llm = ChatGroq(model_name="mixtral-8x7b-32768", api_key=groq_api_key)
-    qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
-    
-    queries = {
-        "name": "Extract the candidate's name from the resume.",
-        "college": "Extract the candidate's college/university.",
-        "place": "Extract the location of the candidate.",
-        "email": "Extract the email address.",
-        "phone": "Extract the phone number.",
-        "working company": "Extract the current or most recent company the candidate worked at.",
-        "years of experience": "Extract the years of experience of the candidate."
-    }
-    
-    extracted_data = {}
-    for key, query in queries.items():
-        extracted_data[key] = qa_chain.run(query)
-    
-    return extracted_data
+def primary_info(file):
+    try:
+        if not check_status() and file is not None:
+            nltk.download('stopwords')
+            parsed_document = ResumeParser(file)
+            result_dict = parsed_document.get_extracted_data()
+            if result_dict:
+                st.session_state['college_name'] = result_dict.get('college_name')
+                st.session_state['company_names'] = result_dict.get('company_names')
+                st.session_state['degree'] = result_dict.get('degree')
+                st.session_state['designation'] = result_dict.get('designation')
+                st.session_state['email'] = result_dict.get('email')
+                st.session_state['mobile_number'] = result_dict.get('mobile_number')
+                st.session_state['name'] = result_dict.get('name')
+                st.session_state['no_of_pages'] = result_dict.get('no_of_pages')
+                st.session_state['skills'] = result_dict.get('skills')
+                st.session_state['total_experience'] = result_dict.get('total_experience')
+                st.session_state['count'] = 1
+    except Exception as e:
+        st.error(f"You got the following error: {e}")
 
-# Main App Layout
-with st.sidebar():
-    options = option_menu("Choose Stage", ["About The App", "Resume Parser"], menu_icon="gear", icons=['sun', 'moon'])
+def insights():
+    pass
 
-if options == "About The App":
-    st.title("About The App")
-    st.write("This application parses resumes using AI and provides insights.")
+# File uploader
+fileUploader = st.sidebar.file_uploader("Upload Files Of Type PDF, DOCX", type=['pdf', 'docx', 'doc'])
 
-elif options == "Resume Parser":
-    st.title("Resume Parser")
-    groq_api_key = st.text_input("Enter your Groq API Key", type="password")
-    uploaded_file = st.file_uploader("Upload Resume", type=["pdf", "doc", "docx"])
-    
-    if uploaded_file and groq_api_key:
-        documents = process_resume(uploaded_file)
-        if documents:
-            extracted_data = store_and_retrieve_info(documents, groq_api_key)
-            for key, value in extracted_data.items():
-                st.session_state[key] = value
-            
-            tab1, tab2, tab3 = st.tabs(["Parsed Information", "View Resume", "Insights"])
-            
-            with tab1:
-                st.header("Extracted Information")
-                for key in session_variables:
-                    st.write(f"**{key.capitalize()}:** {st.session_state[key]}")
-                
-            with tab2:
-                st.header("Uploaded Resume")
-                st.write("Resume preview will be displayed here.")  # Implement file display logic
-            
-            with tab3:
-                st.header("Insights")
-                st.write("Advanced resume insights coming soon...")
+# Sidebar menu
+with st.sidebar:
+    selected = option_menu(
+        menu_title="Navigation",
+        options=["About The App", "Primary Info", "Key Insights"],
+        icons=["info-circle", "person-badge", "lightbulb"],
+        menu_icon="cast",
+        default_index=0
+    )
+
+# Content handling
+if selected == "About The App":
+    pass  # Placeholder for future content
+elif selected == "Primary Info":
+    primary_info(fileUploader)
+elif selected == "Key Insights":
+    insights()

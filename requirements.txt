@@ -6,3 +6,5 @@ unstructured
 groq
 langchain-community
 sentence-transformers
+huggingface-hub
+pdfminer.six

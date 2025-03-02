@@ -4,3 +4,4 @@ langchain
 faiss-cpu
 unstructured
 groq
+langchain-community

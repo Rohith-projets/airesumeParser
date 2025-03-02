@@ -59,7 +59,7 @@ def store_and_retrieve_info(documents, groq_api_key):
     return extracted_data
 
 # Main App Layout
-with st.sidebar():
+with st.sidebar:
     options = option_menu("Choose Stage", ["About The App", "Resume Parser"], menu_icon="gear", icons=['sun', 'moon'])
 
 if options == "About The App":

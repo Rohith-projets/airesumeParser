@@ -5,3 +5,4 @@ faiss-cpu
 unstructured
 groq
 langchain-community
+sentence-transformers

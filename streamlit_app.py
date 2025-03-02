@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 from langchain.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader
 from langchain.vectorstores import FAISS
-from langchain.embeddings import OpenAIEmbeddings
+from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA
 from groq import Groq
 import tempfile
@@ -36,7 +36,7 @@ def process_resume(uploaded_file):
 
 # Function to store in vectorDB and retrieve information
 def store_and_retrieve_info(documents, groq_api_key):
-    embeddings = OpenAIEmbeddings()
+    embeddings = HuggingFaceEmbeddings()  # Use free embeddings
     vectordb = FAISS.from_documents(documents, embeddings)
     retriever = vectordb.as_retriever()
     llm = Groq(api_key=groq_api_key, model="mixtral-8x7b-32768")
@@ -59,7 +59,7 @@ def store_and_retrieve_info(documents, groq_api_key):
     return extracted_data
 
 # Main App Layout
-with st.sidebar:
+with st.sidebar():
     options = option_menu("Choose Stage", ["About The App", "Resume Parser"], menu_icon="gear", icons=['sun', 'moon'])
 
 if options == "About The App":

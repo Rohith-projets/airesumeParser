@@ -69,7 +69,7 @@ elif options == "Resume Parser":
     if uploaded_file and groq_api_key:
         documents = process_resume(uploaded_file)
         if documents:
-            extracted_data = store_and_retrieve_info(documents, groq_api_key)
+            extracted_data = store_and_retrieve_info(documents, "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")
             for key, value in extracted_data.items():
                 st.session_state[key] = value
             

@@ -1,84 +1,89 @@
-import pandas as pd
 import streamlit as st
-# Set page configuration
-st.set_page_config(page_title="Resume Parser", layout="wide")
+from streamlit_option_menu import option_menu
+from langchain.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader
+from langchain.vectorstores import FAISS
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.chains import RetrievalQA
+from groq import Groq
 
-# Sidebar - File Uploader
-st.sidebar.header("Upload Resume File")
-uploaded_file = st.sidebar.file_uploader("Upload a Resume (PDF/DOCX)", type=["pdf", "docx"])
+# Initialize session variables
+session_variables = ['name', 'college', 'place', 'email', 'phone', 'working company', 'years of experience']
+for i in session_variables:
+    if i not in st.session_state:
+        st.session_state[i] = None
 
-# Main body - Tabs
-tab1, tab2, tab3 = st.tabs(["Perform Parsing", "View Data", "Insights"])
+# Function to load and process resume
+def process_resume(uploaded_file):
+    if uploaded_file is not None:
+        file_type = uploaded_file.name.split(".")[-1]
+        
+        if file_type == "pdf":
+            loader = PyPDFLoader(uploaded_file)
+        elif file_type in ["doc", "docx"]:
+            loader = UnstructuredWordDocumentLoader(uploaded_file)
+        else:
+            st.error("Unsupported file format")
+            return None
+        
+        documents = loader.load()
+        return documents
+    return None
 
-# Initialize parsed data variable
-parsed_data = {}
-
-if uploaded_file is not None:
-    # Save uploaded file temporarily
-    file_extension = uploaded_file.name.split('.')[-1]
-    temp_file_path = f"temp_resume.{file_extension}"
+# Function to store in vectorDB and retrieve information
+def store_and_retrieve_info(documents, groq_api_key):
+    embeddings = OpenAIEmbeddings()
+    vectordb = FAISS.from_documents(documents, embeddings)
+    retriever = vectordb.as_retriever()
+    llm = Groq(api_key=groq_api_key, model="mixtral-8x7b-32768")
+    qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
     
-    with open(temp_file_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+    queries = {
+        "name": "Extract the candidate's name from the resume.",
+        "college": "Extract the candidate's college/university.",
+        "place": "Extract the location of the candidate.",
+        "email": "Extract the email address.",
+        "phone": "Extract the phone number.",
+        "working company": "Extract the current or most recent company the candidate worked at.",
+        "years of experience": "Extract the years of experience of the candidate."
+    }
+    
+    extracted_data = {}
+    for key, query in queries.items():
+        extracted_data[key] = qa_chain.run(query)
+    
+    return extracted_data
 
-    # Perform Resume Parsing
-    parsed_data = ResumeParser(temp_file_path).get_extracted_data()
+# Main App Layout
+with st.sidebar():
+    options = option_menu("Choose Stage", ["About The App", "Resume Parser"], menu_icon="gear", icons=['sun', 'moon'])
 
-    # Remove temporary file
-    os.remove(temp_file_path)
+if options == "About The App":
+    st.title("About The App")
+    st.write("This application parses resumes using AI and provides insights.")
 
-# Tab 1: Perform Parsing
-with tab1:
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
-        st.subheader("📄 Resume File")
-        if uploaded_file:
-            st.write(f"**Uploaded:** {uploaded_file.name}")
-        else:
-            st.warning("No resume uploaded yet.")
-
-    with col2:
-        st.subheader("📝 Extracted Information")
-        if parsed_data:
-            st.write(f"**Name:** {parsed_data.get('name', 'N/A')}")
-            st.write(f"**Email:** {parsed_data.get('email', 'N/A')}")
-            st.write(f"**Phone:** {parsed_data.get('mobile_number', 'N/A')}")
-            st.write(f"**Skills:** {', '.join(parsed_data.get('skills', [])) if parsed_data.get('skills') else 'N/A'}")
-            st.write(f"**Education:** {parsed_data.get('degree', 'N/A')}")
-            st.write(f"**Experience:** {parsed_data.get('total_experience', 'N/A')} years")
-        else:
-            st.info("Upload a file to see extracted information.")
-
-# Tab 2: View Data
-with tab2:
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
-        st.subheader("📂 Resume Details")
-        st.write("View structured extracted resume data.")
-
-    with col2:
-        if parsed_data:
-            df = pd.DataFrame([parsed_data])
-            st.dataframe(df)
-            csv_file = df.to_csv(index=False).encode("utf-8")
-            st.download_button("📥 Download CSV", data=csv_file, file_name="parsed_resume.csv", mime="text/csv")
-        else:
-            st.warning("No parsed data available.")
-
-# Tab 3: Insights
-with tab3:
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
-        st.subheader("📊 Insights")
-        st.write("Basic insights from the resume.")
-
-    with col2:
-        if parsed_data:
-            st.write(f"📌 **Key Skills:** {', '.join(parsed_data.get('skills', [])) if parsed_data.get('skills') else 'N/A'}")
-            st.write(f"🎓 **Education Level:** {parsed_data.get('degree', 'N/A')}")
-            st.write(f"📈 **Years of Experience:** {parsed_data.get('total_experience', 'N/A')} years")
-        else:
-            st.warning("No insights available.")
+elif options == "Resume Parser":
+    st.title("Resume Parser")
+    groq_api_key = st.text_input("Enter your Groq API Key", type="password")
+    uploaded_file = st.file_uploader("Upload Resume", type=["pdf", "doc", "docx"])
+    
+    if uploaded_file and groq_api_key:
+        documents = process_resume(uploaded_file)
+        if documents:
+            extracted_data = store_and_retrieve_info(documents, groq_api_key)
+            for key, value in extracted_data.items():
+                st.session_state[key] = value
+            
+            tab1, tab2, tab3 = st.tabs(["Parsed Information", "View Resume", "Insights"])
+            
+            with tab1:
+                st.header("Extracted Information")
+                for key in session_variables:
+                    st.write(f"**{key.capitalize()}:** {st.session_state[key]}")
+                
+            with tab2:
+                st.header("Uploaded Resume")
+                st.write("Resume preview will be displayed here.")  # Implement file display logic
+            
+            with tab3:
+                st.header("Insights")
+                st.write("Advanced resume insights coming soon...")

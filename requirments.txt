@@ -8,7 +8,7 @@ numpy
 matplolib
 seaborn
 pytesseract
-pdfplumber
-pymupdf
+langchain
+langchain-core
+langchain-community
 groq
-pymupdf

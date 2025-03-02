@@ -1,7 +1,6 @@
 import pandas as pd
 import streamlit as st
 from pyresparser import ResumeParser
-
 # Set page configuration
 st.set_page_config(page_title="Resume Parser", layout="wide")
 

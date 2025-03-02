@@ -13,6 +13,13 @@ for i in session_options:
 if "session_dict" not in st.session_state:
     st.session_state["session_dict"] = {}
 
+
+
+# Ensure necessary corpora are downloaded
+@st.cache_resource
+def download_textblob_corpora():
+    download_all()
+download_textblob_corpora()
 def check_status():
     return st.session_state.get('count', 0) == 1
 

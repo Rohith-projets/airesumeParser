@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_option_menu import option_menu
 from langchain.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader
 from langchain.vectorstores import FAISS
 from langchain.embeddings import OpenAIEmbeddings
@@ -55,7 +54,7 @@ def store_and_retrieve_info(documents, groq_api_key):
 
 # Main App Layout
 with st.sidebar():
-    options = option_menu("Choose Stage", ["About The App", "Resume Parser"], menu_icon="gear", icons=['sun', 'moon'])
+    options = st.pills("Choose Stage", ["About The App", "Resume Parser"], menu_icon="gear", icons=['sun', 'moon'])
 
 if options == "About The App":
     st.title("About The App")

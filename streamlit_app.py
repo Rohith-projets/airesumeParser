@@ -1,9 +1,11 @@
 import streamlit as st
+from streamlit_option_menu import option_menu
 from langchain.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader
 from langchain.vectorstores import FAISS
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.chains import RetrievalQA
 from groq import Groq
+import tempfile
 
 # Initialize session variables
 session_variables = ['name', 'college', 'place', 'email', 'phone', 'working company', 'years of experience']
@@ -16,10 +18,14 @@ def process_resume(uploaded_file):
     if uploaded_file is not None:
         file_type = uploaded_file.name.split(".")[-1]
         
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_type}") as temp_file:
+            temp_file.write(uploaded_file.getvalue())
+            temp_file_path = temp_file.name  # Store the temporary file path
+
         if file_type == "pdf":
-            loader = PyPDFLoader(uploaded_file)
+            loader = PyPDFLoader(temp_file_path)
         elif file_type in ["doc", "docx"]:
-            loader = UnstructuredWordDocumentLoader(uploaded_file)
+            loader = UnstructuredWordDocumentLoader(temp_file_path)
         else:
             st.error("Unsupported file format")
             return None
@@ -52,8 +58,9 @@ def store_and_retrieve_info(documents, groq_api_key):
     
     return extracted_data
 
-
-options = st.pills("Choose Stage", ["About The App", "Resume Parser"])
+# Main App Layout
+with st.sidebar():
+    options = option_menu("Choose Stage", ["About The App", "Resume Parser"], menu_icon="gear", icons=['sun', 'moon'])
 
 if options == "About The App":
     st.title("About The App")
@@ -67,7 +74,7 @@ elif options == "Resume Parser":
     if uploaded_file and groq_api_key:
         documents = process_resume(uploaded_file)
         if documents:
-            extracted_data = store_and_retrieve_info(documents, "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")
+            extracted_data = store_and_retrieve_info(documents, groq_api_key)
             for key, value in extracted_data.items():
                 st.session_state[key] = value
             

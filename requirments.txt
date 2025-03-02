@@ -1,14 +1,6 @@
-# Frontend Tools - Backend Tools
 streamlit
 streamlit-option-menu
-streamlit-extras
-streamlit-tags
-pandas
-numpy
-matplolib
-seaborn
-pytesseract
 langchain
-langchain-core
-langchain-community
+faiss-cpu
+unstructured
 groq

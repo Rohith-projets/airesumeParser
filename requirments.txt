@@ -9,3 +9,4 @@ matplolib
 seaborn
 resume-parser
 groq
+pymupdf

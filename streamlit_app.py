@@ -1,10 +1,10 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
-from langchain.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader
-from langchain.vectorstores import FAISS
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_community.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA
-from groq import Groq
+from langchain.chat_models import ChatGroq
 import tempfile
 
 # Initialize session variables
@@ -39,7 +39,7 @@ def store_and_retrieve_info(documents, groq_api_key):
     embeddings = HuggingFaceEmbeddings()  # Use free embeddings
     vectordb = FAISS.from_documents(documents, embeddings)
     retriever = vectordb.as_retriever()
-    llm = Groq(api_key=groq_api_key, model="mixtral-8x7b-32768")
+    llm = ChatGroq(model_name="mixtral-8x7b-32768", api_key=groq_api_key)
     qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
     
     queries = {
@@ -59,7 +59,7 @@ def store_and_retrieve_info(documents, groq_api_key):
     return extracted_data
 
 # Main App Layout
-with st.sidebar:
+with st.sidebar():
     options = option_menu("Choose Stage", ["About The App", "Resume Parser"], menu_icon="gear", icons=['sun', 'moon'])
 
 if options == "About The App":

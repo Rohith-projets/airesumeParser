@@ -7,3 +7,4 @@ pandas
 pypdf
 pdfplumber
 docx
+exceptions

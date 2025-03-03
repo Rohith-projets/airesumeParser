@@ -13,10 +13,14 @@ def parsed_string(file):
 
 def call_llm(parsed_text):
     """Calls the LLM model to extract structured information."""
-    query = """Extract the primary details such as name, phone number, email, degree,
-    designation, company names, college name, total experience, and skills from the parsed text.
-    Return the extracted details in the following format:\n\nPrimary Information Extracted From PDF:\n1.
-    Name: <value>\n2. Phone: <value>\n3. Email: <value>\n..."""
+    query = """Extract the primary details such as name, phone number, email, degree, designation, company names, college name, total experience, and skills from the parsed text. 
+    Return the extracted details in the following format:
+
+    Primary Information Extracted From PDF:
+    1. **Name**: <value>
+    2. **Phone**: <value>
+    3. **Email**: <value>
+    ..."""
     
     client = Groq(api_key="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")
     chat_completion = client.chat.completions.create(
@@ -39,13 +43,10 @@ def primary_info(file):
         response = call_llm(parsed_text)
         st.session_state["llm_response"] = response  # Store response in session state
         
-        # Display response in column layout
-        col1, col2 = st.columns([1.5, 2])
-        with col1:
-            st.subheader("Extracted Information", divider="blue")
-            col1.markdown(f"```\n{response}\n```")
-        with col2:
-            st.info("PDF Viewer Coming Soon!")
+        # Display response in full width
+        st.subheader("Extracted Information", divider="blue")
+        st.markdown(response, unsafe_allow_html=True)
+        
     except Exception as e:
         st.error(f"Error: {e}")
 

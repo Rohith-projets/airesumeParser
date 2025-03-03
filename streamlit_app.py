@@ -2,10 +2,11 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 from streamlit_extras.metric_cards import *
 from groq import Groq
-from pyresparser import ResumeParser
-import nltk
+from pypdf import PdfReader
 
-session_options = ['college_name', 'company_names', 'degree', 'designation', 'email','mobile_number','name','no_of_pages','skills','total_experience','count']
+# Initialize session state variables
+session_options = ['college_name', 'company_names', 'degree', 'designation',
+                   'email', 'mobile_number', 'name', 'no_of_pages', 'skills', 'total_experience', 'count']
 for i in session_options:
     if i not in st.session_state:
         st.session_state[i] = None
@@ -16,29 +17,58 @@ if "session_dict" not in st.session_state:
 def check_status():
     return st.session_state.get('count', 0) == 1
 
+def parsed_string(file):
+    reader = PdfReader(file)
+    page_string = ""
+    for i in range(len(reader.pages)):
+        page_string += "\n" + reader.pages[i].extract_text()  # Extract text properly
+    return page_string
+
+def call_llm(parsed_text, query):
+    if "count" in query:
+        query.remove("count")  # Fix: Use remove() properly
+    query_str = ",".join(query)
+    
+    final_query = """You are given a list of strings which are comma-separated.
+    Also, you are given a parsed string. Just extract information for a list of comma-separated items from the parsed string.
+    If any information is not found, return 'Information Not Found'.
+    The returned string should contain only the values in a comma-separated format (e.g., value1,value2).
+    So just return a string with the corresponding and accurate values, comma-separated.
+    """
+    
+    client = Groq(api_key="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")
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {"role": "system", "content": """You are a very good Resume Parser Software.
+            You have to return the parsed content from the parsed string.
+            Note: You are given a parsed string from the documents and a query.
+            You have to extract the information related to the query."""},
+            {"role": "user", "content": f"{final_query} \n Parsed String: {parsed_text} \n Information To Extract: {query_str}"}
+        ],
+        model="llama-3.3-70b-versatile"
+    )
+    return chat_completion.choices[0].message.content  # Fix: Correct response handling
+
 def primary_info(file):
+    if not file:
+        st.warning("Please upload a file to extract information.")
+        return
+    
+    parsed_text = parsed_string(file)  # Fix: Use correct function name
     try:
-        if not check_status() and file is not None:
-            nltk.download('stopwords')
-            parsed_document = ResumeParser(file)
-            result_dict = parsed_document.get_extracted_data()
-            if result_dict:
-                st.session_state['college_name'] = result_dict.get('college_name')
-                st.session_state['company_names'] = result_dict.get('company_names')
-                st.session_state['degree'] = result_dict.get('degree')
-                st.session_state['designation'] = result_dict.get('designation')
-                st.session_state['email'] = result_dict.get('email')
-                st.session_state['mobile_number'] = result_dict.get('mobile_number')
-                st.session_state['name'] = result_dict.get('name')
-                st.session_state['no_of_pages'] = result_dict.get('no_of_pages')
-                st.session_state['skills'] = result_dict.get('skills')
-                st.session_state['total_experience'] = result_dict.get('total_experience')
-                st.session_state['count'] = 1
+        value = call_llm(parsed_text, session_options)
+        value_list = value.split(',')
+        
+        for i in range(len(session_options) - 1):
+            if session_options[i] != 'count' and i < len(value_list):
+                st.session_state[session_options[i]] = value_list[i]
+        
+        st.success("Information extracted successfully!")
     except Exception as e:
         st.error(f"You got the following error: {e}")
 
 def insights():
-    pass
+    pass  # Placeholder for insights logic
 
 # File uploader
 fileUploader = st.sidebar.file_uploader("Upload Files Of Type PDF, DOCX", type=['pdf', 'docx', 'doc'])

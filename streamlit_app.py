@@ -4,7 +4,7 @@ import time
 from groq import Groq
 
 def call_llm(query):
-    client = Groq(api_key="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")
+    client = Groq(api_key="")
     response = client.chat.completions.create(
         model="mixtral-8x7b-32768",
         messages=[

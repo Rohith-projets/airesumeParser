@@ -5,7 +5,3 @@ groq
 numpy
 pandas
 pypdf
-pdfplumber
-docx
-exceptions
-pymupdf

@@ -13,7 +13,10 @@ def parsed_string(file):
 
 def call_llm(parsed_text):
     """Calls the LLM model to extract structured information."""
-    query = "Extract the primary details such as name, phone number, email, degree, designation, company names, college name, total experience, and skills from the parsed text. Return the extracted details in the following format:\n\nPrimary Information Extracted From PDF:\n1. Name: <value>\n2. Phone: <value>\n3. Email: <value>\n...""
+    query = """Extract the primary details such as name, phone number, email, degree,
+    designation, company names, college name, total experience, and skills from the parsed text.
+    Return the extracted details in the following format:\n\nPrimary Information Extracted From PDF:\n1.
+    Name: <value>\n2. Phone: <value>\n3. Email: <value>\n..."""
     
     client = Groq(api_key="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")
     chat_completion = client.chat.completions.create(

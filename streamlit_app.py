@@ -1,71 +1,58 @@
 import streamlit as st
-import fitz  # PyMuPDF for PDF processing
-from groq import Groq
 from streamlit_option_menu import option_menu
+from groq import Groq
+from pypdf import PdfReader
 
-# Initialize session state
-if "primary_info" not in st.session_state:
-    st.session_state["primary_info"] = None
+def parsed_string(file):
+    """Extract text from a PDF file."""
+    reader = PdfReader(file)
+    page_string = ""
+    for page in reader.pages:
+        page_string += "\n" + page.extract_text()
+    return page_string
 
-# Function to extract text from PDF
-def parse_pdf(file):
-    doc = fitz.open(stream=file.read(), filetype="pdf")
-    text = "\n".join(page.get_text() for page in doc)
-    return text if text.strip() else "No readable text found."
-
-# Function to call LLM from Groq
 def call_llm(parsed_text):
-    final_query = """Extract the primary details (Name, Email, Phone, etc.) from the given parsed text.
-    Format the response as:
-    1. Name: <value>
-    2. Email: <value>
-    3. Phone: <value>
-    If any detail is missing, return 'Information Not Found' for that field.
-    """
-
-    client = Groq(api_key="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")  # Replace with actual API key
-
+    """Calls the LLM model to extract structured information."""
+    query = "Extract the primary details such as name, phone number, email, degree, designation, company names, college name, total experience, and skills from the parsed text. Return the extracted details in the following format:\n\nPrimary Information Extracted From PDF:\n1. Name: <value>\n2. Phone: <value>\n3. Email: <value>\n...""
+    
+    client = Groq(api_key="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")
     chat_completion = client.chat.completions.create(
         messages=[
-            {"role": "system", "content": "You are an advanced resume parser. Extract primary details in a structured format."},
-            {"role": "user", "content": f"{final_query}\nParsed Text:\n{parsed_text}"}
+            {"role": "system", "content": "You are a professional resume parser. Extract and format details clearly."},
+            {"role": "user", "content": f"{query}\n\nParsed Text:\n{parsed_text}"}
         ],
-        model="deepseek-chat"  # Using DeepSeek if available
+        model="llama-3.3-70b-versatile"
     )
     return chat_completion.choices[0].message.content
 
-# Function to display primary information
 def primary_info(file):
+    """Handles primary information extraction from the uploaded file."""
     if not file:
         st.warning("Please upload a file to extract information.")
         return
+    
+    parsed_text = parsed_string(file)
+    try:
+        response = call_llm(parsed_text)
+        st.session_state["llm_response"] = response  # Store response in session state
+        
+        # Display response in column layout
+        col1, col2 = st.columns([1.5, 2])
+        with col1:
+            st.subheader("Extracted Information", divider="blue")
+            col1.markdown(f"```\n{response}\n```")
+        with col2:
+            st.info("PDF Viewer Coming Soon!")
+    except Exception as e:
+        st.error(f"Error: {e}")
 
-    if st.session_state["primary_info"] is None:
-        parsed_text = parse_pdf(file)
-        try:
-            st.session_state["primary_info"] = call_llm(parsed_text)
-        except Exception as e:
-            st.error(f"Error: {e}")
-            return
-
-    tab1, tab2 = st.tabs(["Primary Info", "View PDF"])
-
-    with tab1:
-        st.subheader("Extracted Primary Details", divider="blue")
-        st.markdown(st.session_state["primary_info"])
-
-    with tab2:
-        st.write("Uploaded PDF:")
-        st.download_button("Download Parsed Text", st.session_state["primary_info"], "parsed_info.txt")
-
-# Placeholder for insights
 def insights():
-    st.info("Key Insights will be implemented soon.")
+    pass  # Placeholder for insights logic
 
-# File uploader in sidebar
-fileUploader = st.sidebar.file_uploader("Upload PDF Resume", type=["pdf"])
+# File uploader
+fileUploader = st.sidebar.file_uploader("Upload Files Of Type PDF, DOCX", type=['pdf', 'docx', 'doc'])
 
-# Sidebar navigation menu
+# Sidebar menu
 with st.sidebar:
     selected = option_menu(
         menu_title="Navigation",
@@ -75,10 +62,13 @@ with st.sidebar:
         default_index=0
     )
 
-# Main content handling
+# Content handling
 if selected == "About The App":
-    st.write("This app extracts primary information from resumes.")
+    st.subheader("About The App")
+    st.write("This app extracts key resume information using AI.")
+
 elif selected == "Primary Info":
     primary_info(fileUploader)
+
 elif selected == "Key Insights":
     insights()

@@ -1,88 +1,71 @@
 import streamlit as st
-import pdfplumber
-import docx
-import openai
+import fitz  # PyMuPDF for PDF processing
+from groq import Groq
 from streamlit_option_menu import option_menu
 
-# Function to extract text from uploaded files
-def extract_text(file):
-    page_string = ""
-    if file.type == "application/pdf":
-        with pdfplumber.open(file) as reader:
-            for page in reader.pages:
-                page_string += page.extract_text() + "\n" if page.extract_text() else ""
-    elif file.type in ["application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/msword"]:
-        doc = docx.Document(file)
-        for para in doc.paragraphs:
-            page_string += para.text + "\n"
-    else:
-        return "Unsupported file type"
-    return page_string.strip()
+# Initialize session state
+if "primary_info" not in st.session_state:
+    st.session_state["primary_info"] = None
 
-# Function to call the LLM API
+# Function to extract text from PDF
+def parse_pdf(file):
+    doc = fitz.open(stream=file.read(), filetype="pdf")
+    text = "\n".join(page.get_text() for page in doc)
+    return text if text.strip() else "No readable text found."
+
+# Function to call LLM from Groq
 def call_llm(parsed_text):
-    final_query = """
-    You are given a list of strings which are comma-separated.
-    Also, you are given a parsed string. Extract information for a list of comma-separated items from the parsed string.
-    If any information is not found, return 'Information Not Found'.
-    The returned string should contain only the values in a comma-separated format (e.g., value1,value2).
+    final_query = """Extract the primary details (Name, Email, Phone, etc.) from the given parsed text.
+    Format the response as:
+    1. Name: <value>
+    2. Email: <value>
+    3. Phone: <value>
+    If any detail is missing, return 'Information Not Found' for that field.
     """
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": """You are a very good Resume Parser Software.
-            Extract primary information from resumes, such as Name, Email, and Phone Number.
-            Return the content as:
-            1. Name: [Name]
-            2. Phone: [Phone]
-            3. Email: [Email]
-            If any field is missing, return "Information Not Found" for that field."""},
-            {"role": "user", "content": f"{final_query} \n Parsed String: {parsed_text}"}
-        ]
-    )
-    return response["choices"][0]["message"]["content"]
+    client = Groq(api_key="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")  # Replace with actual API key
 
-# Function to handle primary information extraction
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {"role": "system", "content": "You are an advanced resume parser. Extract primary details in a structured format."},
+            {"role": "user", "content": f"{final_query}\nParsed Text:\n{parsed_text}"}
+        ],
+        model="deepseek-chat"  # Using DeepSeek if available
+    )
+    return chat_completion.choices[0].message.content
+
+# Function to display primary information
 def primary_info(file):
     if not file:
         st.warning("Please upload a file to extract information.")
         return
-    
-    if 'primary_info' not in st.session_state:
-        st.session_state['primary_info'] = None
-    
-    if st.session_state['primary_info'] is None:
-        parsed_text = extract_text(file)
-        if not parsed_text:
-            st.error("Could not extract text from the file.")
-            return
-        
+
+    if st.session_state["primary_info"] is None:
+        parsed_text = parse_pdf(file)
         try:
-            st.session_state['primary_info'] = call_llm(parsed_text)
+            st.session_state["primary_info"] = call_llm(parsed_text)
         except Exception as e:
-            st.error(f"Error during LLM processing: {e}")
+            st.error(f"Error: {e}")
             return
 
-    # Tabs for displaying extracted information
     tab1, tab2 = st.tabs(["Primary Info", "View PDF"])
-    
+
     with tab1:
-        with st.container():
-            st.subheader("Primary Details", divider='blue')
-            st.markdown(st.session_state['primary_info'])
-    
+        st.subheader("Extracted Primary Details", divider="blue")
+        st.markdown(st.session_state["primary_info"])
+
     with tab2:
-        st.write("File preview feature can be added here.")
+        st.write("Uploaded PDF:")
+        st.download_button("Download Parsed Text", st.session_state["primary_info"], "parsed_info.txt")
 
-# Placeholder for insights logic
+# Placeholder for insights
 def insights():
-    st.info("Insights feature coming soon.")
+    st.info("Key Insights will be implemented soon.")
 
-# Sidebar file uploader
-fileUploader = st.sidebar.file_uploader("Upload Files (PDF, DOCX)", type=['pdf', 'docx', 'doc'])
+# File uploader in sidebar
+fileUploader = st.sidebar.file_uploader("Upload PDF Resume", type=["pdf"])
 
-# Sidebar Navigation Menu
+# Sidebar navigation menu
 with st.sidebar:
     selected = option_menu(
         menu_title="Navigation",
@@ -92,7 +75,7 @@ with st.sidebar:
         default_index=0
     )
 
-# Main App Logic
+# Main content handling
 if selected == "About The App":
     st.write("This app extracts primary information from resumes.")
 elif selected == "Primary Info":

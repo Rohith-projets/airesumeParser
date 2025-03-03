@@ -3,6 +3,7 @@ from streamlit_option_menu import option_menu
 from streamlit_extras.metric_cards import *
 from groq import Groq
 from pypdf import PdfReader
+import pandas as pd
 
 # Initialize session state variables
 session_options = ['college_name', 'company_names', 'degree', 'designation',
@@ -59,11 +60,25 @@ def primary_info(file):
         value = call_llm(parsed_text, session_options)
         value_list = value.split(',')
         
+        extracted_data = {}
         for i in range(len(session_options) - 1):
             if session_options[i] != 'count' and i < len(value_list):
                 st.session_state[session_options[i]] = value_list[i]
+                extracted_data[session_options[i]] = [value_list[i]]
         
         st.success("Information extracted successfully!")
+        
+        tab1, tab2 = st.tabs(["Primary Details", "Uploaded PDF"])
+        with tab1:
+            st.subheader("Primary Details")
+            df = pd.DataFrame(extracted_data)
+            st.dataframe(df)
+        
+        with tab2:
+            st.subheader("Uploaded PDF")
+            st.download_button("Download Extracted Data", df.to_csv(index=False), "extracted_info.csv", "text/csv")
+            st.text_area("Extracted Text", parsed_text, height=300)
+        
     except Exception as e:
         st.error(f"You got the following error: {e}")
 

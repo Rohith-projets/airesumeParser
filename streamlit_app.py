@@ -2,6 +2,11 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 from groq import Groq  # Ensure the correct import for your API client
 
+def parsed_string(file):
+    """Parses the uploaded file and extracts text."""
+    # Add logic for parsing PDF, DOCX, DOC files
+    return "Extracted text from file"  # Placeholder implementation
+
 def call_llm(parsed_text):
     """Calls the LLM for resume parsing and extracts structured information."""
     if "llm_response" not in st.session_state:
@@ -43,7 +48,7 @@ def primary_info(file):
         st.session_state["parsed_text"] = parsed_string(file)
     
     response = call_llm(st.session_state["parsed_text"])
-    st.subheader("Extracted Information", divider="blue")
+    st.subheader("Extracted Information")
     st.markdown(response, unsafe_allow_html=True)
 
 def insights():

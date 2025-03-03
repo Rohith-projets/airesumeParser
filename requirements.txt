@@ -8,3 +8,4 @@ pypdf
 pdfplumber
 docx
 exceptions
+pymupdf

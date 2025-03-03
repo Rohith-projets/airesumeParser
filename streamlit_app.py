@@ -35,7 +35,7 @@ if selected == "Generate Educational Content":
             content = call_llm(query)
             st.session_state["generated_content"][query] = content
         st.subheader("Generated Content")
-            st.write(content)
+        st.write(content)
 elif selected == "View Generated Content":
     if st.session_state["generated_content"]:
         topic = st.selectbox("Select a topic:", list(st.session_state["generated_content"].keys()))

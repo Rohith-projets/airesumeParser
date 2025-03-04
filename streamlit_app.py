@@ -77,7 +77,7 @@ class VideoLectures:
                     st.experimental_rerun()  # Refresh UI to display new response
 
             with col2:
-                notes = st.text_area("Your Notes", value=st.session_state["videos"][url][1], height=900)
+                notes = st.text_area("Your Notes", value=st.session_state["videos"][url][1], height=3900)
                 save = st.button("Save", use_container_width=True)
                 if save:
                     st.session_state["videos"][url][1] = notes

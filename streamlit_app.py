@@ -27,13 +27,13 @@ def call_llm(query, api_key):
     except Exception as e:
         return f"Error: {str(e)}"
 
-def call_llm_for_video(transcript, api_key):
+def call_llm_for_video(description, api_key):
     try:
         client = Groq(api_key=api_key)
         chat_completion = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": "You are a professional educator and article writer."},
-                {"role": "user", "content": f"Analyze this transcript and write a detailed article: {transcript}"}
+                {"role": "user", "content": f"Analyze this video description and write a detailed article: {description}"}
             ],
             model="llama-3.3-70b-versatile",
         )
@@ -55,16 +55,8 @@ class VideoLectures:
         if url:
             try:
                 yt = YouTube(url)
-                if yt.captions:
-                    transcript = yt.captions.get_by_language_code("en")
-                    if transcript:
-                        transcript_text = transcript.generate_srt_captions()
-                    else:
-                        raise Exception("English transcript not available.")
-                else:
-                    raise Exception("No captions available for this video.")
-                
-                response = call_llm_for_video(transcript_text, api_key)
+                description = yt.description if yt.description else "No description available."
+                response = call_llm_for_video(description, api_key)
                 col1, col2 = st.columns([1, 1])
                 with col1:
                     st.video(url)
@@ -80,13 +72,13 @@ class VideoLectures:
                         pdf.add_page()
                         pdf.set_font("Arial", size=12)
                         pdf.multi_cell(0, 10, f"Video Summary:\n{response}\n\nYour Notes:\n{notes}")
-                        pdf_file = f"{video_id}.pdf"
+                        pdf_file = f"{yt.video_id}.pdf"
                         pdf.output(pdf_file)
                         with open(pdf_file, "rb") as file:
                             st.download_button("Download PDF", file, file_name=pdf_file)
                         os.remove(pdf_file)
             except Exception as e:
-                st.error(f"Error retrieving transcript: {str(e)}")
+                st.error(f"Error retrieving video description: {str(e)}")
 
 class History:
     def display(self):

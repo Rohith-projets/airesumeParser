@@ -5,6 +5,7 @@ from streamlit_extras.add_vertical_space import add_vertical_space
 from groq import Groq
 from fpdf import FPDF
 import os
+import re
 
 # Initialize session state variables
 if "articles" not in st.session_state:
@@ -52,7 +53,13 @@ class VideoLectures:
     def display(self, api_key):
         url = st.text_input("Enter YouTube URL")
         if url:
-            video_id = url.split("v=")[-1].split("&")[0]
+            video_id_match = re.search(r"(?:v=|youtu\\.be/)([\w-]+)", url)
+            if video_id_match:
+                video_id = video_id_match.group(1)
+            else:
+                st.error("Invalid YouTube URL. Please check the format.")
+                return
+            
             try:
                 transcript = YouTubeTranscriptApi.get_transcript(video_id)
                 transcript_text = " ".join([t["text"] for t in transcript])
@@ -107,14 +114,12 @@ st.sidebar.header("Learning Platform")
 api_key = st.sidebar.text_input("Enter Groq API Key", type="password", key="api_key")
 
 # Navigation menu
-
-with st.sidebar:
-    selected = option_menu(
-        "Menu", ["Read Articles", "Learn From YouTube", "Your History"],
-        icons=["book", "youtube", "clock"],
-        menu_icon="menu-hamburger",
-        default_index=0
-    )
+selected = option_menu(
+    "Menu", ["Read Articles", "Learn From YouTube", "Your History"],
+    icons=["book", "youtube", "clock"],
+    menu_icon="menu-hamburger",
+    default_index=0
+)
 
 # Route based on selection
 if selected == "Read Articles":

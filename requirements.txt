@@ -1,9 +1,6 @@
 streamlit
-streamlit-option-menu
+streamlit_option_menu
 yt-dlp
 streamlit-extras
 groq
 fpdf
-speechrecognition
-pydub
-imageio-ffmpeg

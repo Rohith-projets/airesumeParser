@@ -1,11 +1,13 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
-from pytube import YouTube
+import yt_dlp
 from streamlit_extras.add_vertical_space import add_vertical_space
 from groq import Groq
 from fpdf import FPDF
 import os
 import re
+import speech_recognition as sr
+from pydub import AudioSegment
 
 # Initialize session state variables
 if "articles" not in st.session_state:
@@ -13,6 +15,38 @@ if "articles" not in st.session_state:
 if "videos" not in st.session_state:
     st.session_state["videos"] = {}
 
+# Function to extract audio from YouTube video
+def extract_audio(url):
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': 'audio.%(ext)s',
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+            return "audio.mp3"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+# Function to convert audio to text
+def audio_to_text(audio_file):
+    recognizer = sr.Recognizer()
+    audio = AudioSegment.from_mp3(audio_file)
+    audio.export("audio.wav", format="wav")
+    with sr.AudioFile("audio.wav") as source:
+        audio_data = recognizer.record(source)
+        try:
+            text = recognizer.recognize_google(audio_data)
+            return text
+        except Exception as e:
+            return f"Error: {str(e)}"
+
+# Function to call LLM API
 def call_llm(query, api_key):
     try:
         client = Groq(api_key=api_key)
@@ -20,20 +54,6 @@ def call_llm(query, api_key):
             messages=[
                 {"role": "system", "content": "You are a very good educator, content explainer, and professional article writer who writes with simple English."},
                 {"role": "user", "content": f"Write a long article on this query: {query}."}
-            ],
-            model="llama-3.3-70b-versatile",
-        )
-        return chat_completion.choices[0].message.content
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-def call_llm_for_video(description, api_key):
-    try:
-        client = Groq(api_key=api_key)
-        chat_completion = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": "You are a professional educator and article writer."},
-                {"role": "user", "content": f"Analyze this video description and write a detailed article: {description}"}
             ],
             model="llama-3.3-70b-versatile",
         )
@@ -54,31 +74,34 @@ class VideoLectures:
         url = st.text_input("Enter YouTube URL")
         if url:
             try:
-                yt = YouTube(url)
-                description = yt.description if yt.description else "No description available."
-                response = call_llm_for_video(description, api_key)
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    st.video(url)
-                    st.write(response)
-                with col2:
-                    notes = st.text_area("Your Notes", height=400)
-                    save = st.button("Save", use_container_width=True)
-                    download = st.button("Download", use_container_width=True)
-                    if save:
-                        st.session_state["videos"][url] = [response, notes]
-                    if download:
-                        pdf = FPDF()
-                        pdf.add_page()
-                        pdf.set_font("Arial", size=12)
-                        pdf.multi_cell(0, 10, f"Video Summary:\n{response}\n\nYour Notes:\n{notes}")
-                        pdf_file = f"{yt.video_id}.pdf"
-                        pdf.output(pdf_file)
-                        with open(pdf_file, "rb") as file:
-                            st.download_button("Download PDF", file, file_name=pdf_file)
-                        os.remove(pdf_file)
+                audio_file = extract_audio(url)
+                if "Error" not in audio_file:
+                    description = audio_to_text(audio_file)
+                    response = call_llm(description, api_key)
+                    col1, col2 = st.columns([1, 1])
+                    with col1:
+                        st.video(url)
+                        st.write(response)
+                    with col2:
+                        notes = st.text_area("Your Notes", height=400)
+                        save = st.button("Save", use_container_width=True)
+                        download = st.button("Download", use_container_width=True)
+                        if save:
+                            st.session_state["videos"][url] = [response, notes]
+                        if download:
+                            pdf = FPDF()
+                            pdf.add_page()
+                            pdf.set_font("Arial", size=12)
+                            pdf.multi_cell(0, 10, f"Video Summary:\n{response}\n\nYour Notes:\n{notes}")
+                            pdf_file = f"{re.sub('[^a-zA-Z0-9]', '_', url)}.pdf"
+                            pdf.output(pdf_file)
+                            with open(pdf_file, "rb") as file:
+                                st.download_button("Download PDF", file, file_name=pdf_file)
+                            os.remove(pdf_file)
+                else:
+                    st.error(audio_file)
             except Exception as e:
-                st.error(f"Error retrieving video description: {str(e)}")
+                st.error(f"Error processing video: {str(e)}")
 
 class History:
     def display(self):

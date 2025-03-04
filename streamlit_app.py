@@ -1,6 +1,6 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+from pytube import YouTube
 from streamlit_extras.add_vertical_space import add_vertical_space
 from groq import Groq
 from fpdf import FPDF
@@ -61,8 +61,16 @@ class VideoLectures:
                 return
             
             try:
-                transcript = YouTubeTranscriptApi.get_transcript(video_id)
-                transcript_text = " ".join([t["text"] for t in transcript])
+                yt = YouTube(url)
+                if yt.captions:
+                    transcript = yt.captions.get_by_language_code("en")
+                    if transcript:
+                        transcript_text = transcript.generate_srt_captions()
+                    else:
+                        raise Exception("English transcript not available.")
+                else:
+                    raise Exception("No captions available for this video.")
+                
                 response = call_llm_for_video(transcript_text, api_key)
                 col1, col2 = st.columns([1, 1])
                 with col1:
@@ -84,8 +92,6 @@ class VideoLectures:
                         with open(pdf_file, "rb") as file:
                             st.download_button("Download PDF", file, file_name=pdf_file)
                         os.remove(pdf_file)
-            except (TranscriptsDisabled, NoTranscriptFound):
-                st.error("Transcript not available for this video.")
             except Exception as e:
                 st.error(f"Error retrieving transcript: {str(e)}")
 

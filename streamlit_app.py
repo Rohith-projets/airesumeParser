@@ -109,14 +109,16 @@ api_key = st.sidebar.text_input("Enter Groq API Key", type="password", key="api_
 # Navigation menu
 with st.sidebar:
     selected = option_menu(
-        "Menu", ["Read Articles", "Learn From YouTube", "Your History"],
+        "Menu", ["How To Use This Website","Read Articles", "Learn From YouTube", "Your History"],
         icons=["book", "youtube", "clock"],
         menu_icon="menu-hamburger",
         default_index=0
     )
 
 # Route based on selection
-if selected == "Read Articles":
+if selected=="How To Use This Website":
+    st.video("https://youtu.be/iFDMocUeN2g?si=tuWiIasWqt8L7HxU")
+elif selected == "Read Articles":
     ReadArticles().display(api_key)
 elif selected == "Learn From YouTube":
     VideoLectures().display(api_key)

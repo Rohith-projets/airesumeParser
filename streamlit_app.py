@@ -27,7 +27,7 @@ def fetch_video_info(url):
             if "subtitles" in info and "en" in info["subtitles"]:
                 transcript = " ".join([s["text"] for s in info["subtitles"]["en"]])
             description = info.get("description", "No description available")
-            query=(trascript,description)
+            query=(transcript,description)
             return query
     except Exception as e:
         return f"Error: {str(e)}"

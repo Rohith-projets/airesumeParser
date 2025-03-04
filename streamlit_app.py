@@ -53,13 +53,6 @@ class VideoLectures:
     def display(self, api_key):
         url = st.text_input("Enter YouTube URL")
         if url:
-            video_id_match = re.search(r"(?:v=|youtu\\.be/)([\w-]+)", url)
-            if video_id_match:
-                video_id = video_id_match.group(1)
-            else:
-                st.error("Invalid YouTube URL. Please check the format.")
-                return
-            
             try:
                 yt = YouTube(url)
                 if yt.captions:

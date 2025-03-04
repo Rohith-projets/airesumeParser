@@ -1,8 +1,8 @@
 streamlit
 streamlit-option-menu
+yt-dlp
 streamlit-extras
 groq
-youtube-transcript-api
 fpdf
-pytube
-whisper
+speechrecognition
+pydub

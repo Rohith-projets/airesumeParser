@@ -6,14 +6,6 @@ from groq import Groq
 from fpdf import FPDF
 import os
 import re
-import speech_recognition as sr
-from pydub import AudioSegment
-import imageio
-
-# Ensure ffmpeg is available
-imageio.plugins.ffmpeg.download()
-ffmpeg_path = imageio.get_ffmpeg_exe()
-os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
 
 # Initialize session state variables
 if "articles" not in st.session_state:
@@ -21,37 +13,34 @@ if "articles" not in st.session_state:
 if "videos" not in st.session_state:
     st.session_state["videos"] = {}
 
-# Function to extract audio from YouTube video
-def extract_audio(url):
+# Function to extract transcript from YouTube video
+def extract_transcript(url):
     ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': 'audio.%(ext)s',
-        'ffmpeg_location': ffmpeg_path,  # Set the ffmpeg path
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
+        'writesubtitles': True,
+        'writeautomaticsub': True,
+        'skip_download': True,
+        'outtmpl': 'subtitles',
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-            return "audio.mp3"
+            info = ydl.extract_info(url, download=False)
+            subtitles = info.get('subtitles') or info.get('automatic_captions')
+            if subtitles and 'en' in subtitles:
+                subtitle_url = subtitles['en'][-1]['url']
+                return subtitle_url  # Returns the subtitle file URL
+            return None
     except Exception as e:
-        return f"Error: {str(e)}"
+        return None
 
-# Function to convert audio to text
-def audio_to_text(audio_file):
-    recognizer = sr.Recognizer()
-    audio = AudioSegment.from_mp3(audio_file)
-    audio.export("audio.wav", format="wav")
-    with sr.AudioFile("audio.wav") as source:
-        audio_data = recognizer.record(source)
-        try:
-            text = recognizer.recognize_google(audio_data)
-            return text
-        except Exception as e:
-            return f"Error: {str(e)}"
+# Function to fetch video description
+def fetch_video_description(url):
+    ydl_opts = {'skip_download': True}
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            return info.get('description', None)
+    except Exception as e:
+        return None
 
 # Function to call LLM API
 def call_llm(query, api_key):
@@ -81,32 +70,36 @@ class VideoLectures:
         url = st.text_input("Enter YouTube URL")
         if url:
             try:
-                audio_file = extract_audio(url)
-                if "Error" not in audio_file:
-                    description = audio_to_text(audio_file)
-                    response = call_llm(description, api_key)
-                    col1, col2 = st.columns([1, 1])
-                    with col1:
-                        st.video(url)
-                        st.write(response)
-                    with col2:
-                        notes = st.text_area("Your Notes", height=400)
-                        save = st.button("Save", use_container_width=True)
-                        download = st.button("Download", use_container_width=True)
-                        if save:
-                            st.session_state["videos"][url] = [response, notes]
-                        if download:
-                            pdf = FPDF()
-                            pdf.add_page()
-                            pdf.set_font("Arial", size=12)
-                            pdf.multi_cell(0, 10, f"Video Summary:\n{response}\n\nYour Notes:\n{notes}")
-                            pdf_file = f"{re.sub('[^a-zA-Z0-9]', '_', url)}.pdf"
-                            pdf.output(pdf_file)
-                            with open(pdf_file, "rb") as file:
-                                st.download_button("Download PDF", file, file_name=pdf_file)
-                            os.remove(pdf_file)
+                transcript = extract_transcript(url)
+                if transcript:
+                    response = call_llm(transcript, api_key)
                 else:
-                    st.error(audio_file)
+                    description = fetch_video_description(url)
+                    if description:
+                        response = call_llm(description, api_key)
+                    else:
+                        response = "No information is fetchable."
+
+                col1, col2 = st.columns([1, 1])
+                with col1:
+                    st.video(url)
+                    st.write(response)
+                with col2:
+                    notes = st.text_area("Your Notes", height=400)
+                    save = st.button("Save", use_container_width=True)
+                    download = st.button("Download", use_container_width=True)
+                    if save:
+                        st.session_state["videos"][url] = [response, notes]
+                    if download:
+                        pdf = FPDF()
+                        pdf.add_page()
+                        pdf.set_font("Arial", size=12)
+                        pdf.multi_cell(0, 10, f"Video Summary:\n{response}\n\nYour Notes:\n{notes}")
+                        pdf_file = f"{re.sub('[^a-zA-Z0-9]', '_', url)}.pdf"
+                        pdf.output(pdf_file)
+                        with open(pdf_file, "rb") as file:
+                            st.download_button("Download PDF", file, file_name=pdf_file)
+                        os.remove(pdf_file)
             except Exception as e:
                 st.error(f"Error processing video: {str(e)}")
 

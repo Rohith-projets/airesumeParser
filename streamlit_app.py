@@ -39,7 +39,7 @@ def call_llm(query, api_key):
         chat_completion = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": "You are a very good educator, content explainer, and professional article writer who writes with simple English."},
-                {"role": "user", "content": f"Write a long article on this query: {query}."}
+                {"role": "user", "content": f"Write a long article on the main concept extracted from this query: {query}."}
             ],
             model="llama-3.3-70b-versatile",
         )

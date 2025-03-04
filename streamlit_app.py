@@ -8,6 +8,12 @@ import os
 import re
 import speech_recognition as sr
 from pydub import AudioSegment
+import imageio
+
+# Ensure ffmpeg is available
+imageio.plugins.ffmpeg.download()
+ffmpeg_path = imageio.get_ffmpeg_exe()
+os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
 
 # Initialize session state variables
 if "articles" not in st.session_state:
@@ -20,6 +26,7 @@ def extract_audio(url):
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': 'audio.%(ext)s',
+        'ffmpeg_location': ffmpeg_path,  # Set the ffmpeg path
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',

@@ -67,7 +67,7 @@ class VideoLectures:
                 response = call_llm(video_info, api_key)
                 st.session_state["videos"][url] = [response, ""]  # Store response and empty notes
 
-            col1, col2 = st.columns([1, 1])
+            col1, col2 = st.columns([1, 1],border=True)
             with col1:
                 st.video(url)
                 st.write(st.session_state["videos"][url][0])  # Display saved response
@@ -77,7 +77,7 @@ class VideoLectures:
                     st.experimental_rerun()  # Refresh UI to display new response
 
             with col2:
-                notes = st.text_area("Your Notes", value=st.session_state["videos"][url][1], height=400)
+                notes = st.text_area("Your Notes", value=st.session_state["videos"][url][1], height=900)
                 save = st.button("Save", use_container_width=True)
                 if save:
                     st.session_state["videos"][url][1] = notes

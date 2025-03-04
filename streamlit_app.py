@@ -114,12 +114,13 @@ st.sidebar.header("Learning Platform")
 api_key = st.sidebar.text_input("Enter Groq API Key", type="password", key="api_key")
 
 # Navigation menu
-selected = option_menu(
-    "Menu", ["Read Articles", "Learn From YouTube", "Your History"],
-    icons=["book", "youtube", "clock"],
-    menu_icon="menu-hamburger",
-    default_index=0
-)
+with st.sidebar:
+    selected = option_menu(
+        "Menu", ["Read Articles", "Learn From YouTube", "Your History"],
+        icons=["book", "youtube", "clock"],
+        menu_icon="menu-hamburger",
+        default_index=0
+    )
 
 # Route based on selection
 if selected == "Read Articles":

@@ -4,3 +4,6 @@ streamlit-extras
 groq
 youtube-transcript-api
 fpdf
+langchain
+langchain-core
+langchain-community

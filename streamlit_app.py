@@ -3,8 +3,6 @@ from streamlit_option_menu import option_menu
 import yt_dlp
 from streamlit_extras.add_vertical_space import add_vertical_space
 from groq import Groq
-from fpdf import FPDF
-import os
 import re
 
 # Initialize session state variables
@@ -81,27 +79,8 @@ class VideoLectures:
             with col2:
                 notes = st.text_area("Your Notes", value=st.session_state["videos"][url][1], height=400)
                 save = st.button("Save", use_container_width=True)
-                download = st.button("Download", use_container_width=True)
                 if save:
                     st.session_state["videos"][url][1] = notes
-                if download:
-                    pdf = FPDF()
-                    pdf.add_page()
-                    pdf.set_auto_page_break(auto=True, margin=15)
-                    
-                    # Use a Unicode-compatible font
-                    pdf.add_font("Arial", "", "arial.ttf", uni=True)
-                    pdf.set_font("Arial", "", 12)
-                    
-                    pdf.multi_cell(0, 10, f"Video Summary:\n{st.session_state['videos'][url][0]}\n\nYour Notes:\n{notes}")
-                    
-                    pdf_file = f"{re.sub('[^a-zA-Z0-9]', '_', url)}.pdf"
-                    pdf.output(pdf_file, "F")  # Save as a file
-                    
-                    with open(pdf_file, "rb") as file:
-                        st.download_button("Download PDF", file, file_name=pdf_file)
-                    os.remove(pdf_file)
-
 
 class History:
     def display(self):

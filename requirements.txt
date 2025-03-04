@@ -3,4 +3,3 @@ streamlit_option_menu
 yt-dlp
 streamlit-extras
 groq
-fpdf

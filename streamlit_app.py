@@ -75,7 +75,6 @@ class VideoLectures:
                 if st.button("Give Response Again", use_container_width=True):
                     response = call_llm(fetch_video_info(url), api_key)
                     st.session_state["videos"][url][0] = response
-                    st.experimental_rerun()  # Refresh UI to display new response
 
             with col2:
                 notes = st.text_area("Your Notes", value=st.session_state["videos"][url][1], height=3900)

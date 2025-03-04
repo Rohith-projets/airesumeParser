@@ -6,4 +6,4 @@ groq
 fpdf
 speechrecognition
 pydub
-imageio[ffmpeg]
+imageio-ffmpeg

@@ -110,7 +110,7 @@ api_key = st.sidebar.text_input("Enter Groq API Key", type="password", key="api_
 with st.sidebar:
     selected = option_menu(
         "Menu", ["How To Use This Website","Read Articles", "Learn From YouTube", "Your History"],
-        icons=["book", "youtube", "clock"],
+        icons=["question-mark","book", "youtube", "clock"],
         menu_icon="menu-hamburger",
         default_index=0
     )

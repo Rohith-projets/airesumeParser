@@ -13,34 +13,25 @@ if "articles" not in st.session_state:
 if "videos" not in st.session_state:
     st.session_state["videos"] = {}
 
-# Function to extract transcript from YouTube video
-def extract_transcript(url):
+# Function to fetch video transcript or description
+def fetch_video_info(url):
     ydl_opts = {
-        'writesubtitles': True,
-        'writeautomaticsub': True,
-        'skip_download': True,
-        'outtmpl': 'subtitles',
+        "quiet": True,
+        "skip_download": True,
+        "writesubtitles": True,
+        "writeautomaticsub": True,
+        "subtitleslangs": ["en"],
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            subtitles = info.get('subtitles') or info.get('automatic_captions')
-            if subtitles and 'en' in subtitles:
-                subtitle_url = subtitles['en'][-1]['url']
-                return subtitle_url  # Returns the subtitle file URL
-            return None
+            transcript = None
+            if "subtitles" in info and "en" in info["subtitles"]:
+                transcript = " ".join([s["text"] for s in info["subtitles"]["en"]])
+            description = info.get("description", "No description available")
+            return transcript or description
     except Exception as e:
-        return None
-
-# Function to fetch video description
-def fetch_video_description(url):
-    ydl_opts = {'skip_download': True}
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            return info.get('description', None)
-    except Exception as e:
-        return None
+        return f"Error: {str(e)}"
 
 # Function to call LLM API
 def call_llm(query, api_key):
@@ -61,47 +52,48 @@ class ReadArticles:
     def display(self, api_key):
         query = st.chat_input("Ask something...")
         if query:
-            response = call_llm(query, api_key)
-            st.write(response)
-            st.session_state["articles"][query] = response
+            if query not in st.session_state["articles"]:
+                response = call_llm(query, api_key)
+                st.session_state["articles"][query] = response
+            st.write(st.session_state["articles"][query])
 
 class VideoLectures:
     def display(self, api_key):
         url = st.text_input("Enter YouTube URL")
         if url:
-            try:
-                transcript = extract_transcript(url)
-                if transcript:
-                    response = call_llm(transcript, api_key)
-                else:
-                    description = fetch_video_description(url)
-                    if description:
-                        response = call_llm(description, api_key)
-                    else:
-                        response = "No information is fetchable."
+            if url not in st.session_state["videos"]:
+                video_info = fetch_video_info(url)
+                if "Error" in video_info:
+                    st.error(video_info)
+                    return
+                response = call_llm(video_info, api_key)
+                st.session_state["videos"][url] = [response, ""]  # Store response and empty notes
 
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    st.video(url)
-                    st.write(response)
-                with col2:
-                    notes = st.text_area("Your Notes", height=400)
-                    save = st.button("Save", use_container_width=True)
-                    download = st.button("Download", use_container_width=True)
-                    if save:
-                        st.session_state["videos"][url] = [response, notes]
-                    if download:
-                        pdf = FPDF()
-                        pdf.add_page()
-                        pdf.set_font("Arial", size=12)
-                        pdf.multi_cell(0, 10, f"Video Summary:\n{response}\n\nYour Notes:\n{notes}")
-                        pdf_file = f"{re.sub('[^a-zA-Z0-9]', '_', url)}.pdf"
-                        pdf.output(pdf_file)
-                        with open(pdf_file, "rb") as file:
-                            st.download_button("Download PDF", file, file_name=pdf_file)
-                        os.remove(pdf_file)
-            except Exception as e:
-                st.error(f"Error processing video: {str(e)}")
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                st.video(url)
+                st.write(st.session_state["videos"][url][0])  # Display saved response
+                if st.button("Give Response Again", use_container_width=True):
+                    response = call_llm(fetch_video_info(url), api_key)
+                    st.session_state["videos"][url][0] = response
+                    st.experimental_rerun()  # Refresh UI to display new response
+
+            with col2:
+                notes = st.text_area("Your Notes", value=st.session_state["videos"][url][1], height=400)
+                save = st.button("Save", use_container_width=True)
+                download = st.button("Download", use_container_width=True)
+                if save:
+                    st.session_state["videos"][url][1] = notes
+                if download:
+                    pdf = FPDF()
+                    pdf.add_page()
+                    pdf.set_font("Arial", size=12)
+                    pdf.multi_cell(0, 10, f"Video Summary:\n{st.session_state['videos'][url][0]}\n\nYour Notes:\n{notes}")
+                    pdf_file = f"{re.sub('[^a-zA-Z0-9]', '_', url)}.pdf"
+                    pdf.output(pdf_file, "F")  # Save as a file
+                    with open(pdf_file, "rb") as file:
+                        st.download_button("Download PDF", file, file_name=pdf_file)
+                    os.remove(pdf_file)
 
 class History:
     def display(self):
